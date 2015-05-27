@@ -1,0 +1,135 @@
+/*
+
+import java.io.*;
+import java.net.*;
+import java.nio.Buffer;
+
+public class Client {       //实现Runnable接口
+	
+	private static PrintStream  out;
+	private static BufferedReader buf;
+	
+	private static FileInputStream fis;
+	
+	public  static void main(String args[]) throws IOException {
+		
+		byte buffer[] = new byte[1024];
+		
+		Socket client = new Socket("localhost",3801);
+		
+		try {
+			fis = new FileInputStream("test.txt"); 
+		} catch (IOException e3) {
+			// TODO Auto-generated catch block
+			e3.printStackTrace();
+		}
+		
+		int readSize = 0;
+		
+		try {
+			out = new PrintStream(client.getOutputStream());
+		} catch (IOException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		
+		try {
+			buf = new BufferedReader( new InputStreamReader( client.getInputStream() ));
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+			
+		
+		while( fis.read(buffer, 0, 1024) != -1)
+		{
+			out.print(buffer.toString());
+		}
+		
+		fis.close();
+		out.close();
+		buf.close();
+		client.close();
+		
+	}
+}
+ */
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.Socket;
+
+/**
+ * 客户端
+ */
+public class Client extends Socket {
+
+	private static final String SERVER_IP = "127.0.0.1";
+	private static final int SERVER_PORT = 2013;
+
+	private Socket client;
+	private FileInputStream fis;
+	private DataOutputStream dos;
+	private File file;
+	private readExcel RdExcel;
+	private String path = "./test.xls";
+	private byte[] sendBytes = new byte[1024];
+
+	public Client() {
+		try {
+			try {
+				client = new Socket(SERVER_IP, SERVER_PORT);
+				RdExcel = new readExcel(path);
+				dos = new DataOutputStream(client.getOutputStream());
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void SendFile() throws IOException {
+		int length = 0;
+		while ((length = fis.read(sendBytes, 0, sendBytes.length)) > 0) {
+			dos.write(sendBytes, 0, length);
+			dos.flush();
+		}
+	}
+
+	public void start() throws IOException {
+		int i = 0;
+		int num = (RdExcel.rowNum - 1) * 2;
+
+		dos.writeUTF(RdExcel.field);
+		dos.flush();
+		dos.writeLong(num);
+		dos.flush();
+		
+		for (; i < RdExcel.rowNum - 1; i++) {
+			file = new File(RdExcel.getSpecifiedFieldValue(i, "个人简介"));
+			fis = new FileInputStream(file);
+			SendFile();
+			fis.close();
+			
+			file = new File(RdExcel.getSpecifiedFieldValue(i, "照片"));
+			fis = new FileInputStream(file);
+			SendFile();
+			fis.close();
+		}
+
+		if (fis != null)
+			fis.close();
+		if (dos != null)
+			dos.close();
+		client.close();
+	}
+
+	/*
+	 * @SuppressWarnings("resource") public static void main(String[] args)
+	 * throws Exception { new Client().start(); }
+	 */
+}
