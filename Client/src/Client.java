@@ -13,8 +13,8 @@ import java.text.BreakIterator;
 public class Client extends Socket {
 
 	// private static final String SERVER_IP = "10.176.172.123";
-	//private static final String SERVER_IP = "127.0.0.1";
-	private static final String SERVER_IP = "10.177.6.182";
+	private static final String SERVER_IP = "127.0.0.1";
+	//private static final String SERVER_IP = "10.177.6.182";
 	private static final int SERVER_PORT = 2013;
 
 	private Socket client;
@@ -110,8 +110,13 @@ public class Client extends Socket {
 			int size = fis.read();
 			byte SerializeBuf[] = new byte[size];    //开辟序列化数组
 			fis.read(SerializeBuf, 0, SerializeBuf.length);
-			breakInfor.delete();  //删除断点信息文件
-			fis.close();
+			
+			fis.close();//首先fis文件流必须关闭才能成功删除断点信息文件，因为其占用文件
+			if(breakInfor.delete())  //删除断点信息文件
+			{
+				System.out.println("断点信息文件删除成功");
+			}
+			
 			
 			translateRecord = infor.NonSerialize(SerializeBuf);
 			System.out.println("断点续传开始,断点文件是" + translateRecord.getFileName()
@@ -127,7 +132,7 @@ public class Client extends Socket {
 		int i = 0;
 		int num = (RdExcel.rowNum - 1) * 2 + 1;
 
-		file = new File("./data/test.xls");
+		file = new File(path);
 		fis = new RandomAccessFile(file,"rw");
 		Send(fis, num, 0);
 
