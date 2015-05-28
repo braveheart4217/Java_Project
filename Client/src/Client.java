@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.text.BreakIterator;
+import java.util.logging.*;
 
 @SuppressWarnings("unused")
 public class Client extends Socket {
@@ -33,15 +34,23 @@ public class Client extends Socket {
 	private static infor translateRecord = new infor();
 	private byte[] sendBytes = new byte[1024]; // 读取文件buff
 	private static byte buf[] = null;          // 序列化buff
+	
+	private static Logger log;
+	
 
-	public Client() {
+	public Client() throws SecurityException, IOException {
 
+		log = Logger.getLogger("test");
+        FileHandler fileHandler = new FileHandler("./log/test.xml"); 
+        fileHandler.setLevel(Level.FINE); 
+        log.addHandler(fileHandler); 
 	}
 
 	public void init() throws UnknownHostException, IOException {
 
 		dos = new DataOutputStream(client.getOutputStream());
 		RdExcel = new readExcel(searchPath + xlsName);
+		
 	}
 
 	public int sendData(int num, int readLength, long offset, String fileName,
@@ -61,6 +70,8 @@ public class Client extends Socket {
 		fis.seek(offset); // 从指定的offset位置读取文件，为断点续传做准备
 		read = fis.read(sendBytes, 0, sendBytes.length);// 读取指定文件
 		dos.write(sendBytes, 0, readLength); // 再发真实数据
+		
+		log.info("fileName:" + fileName + " readLength:" + readLength + " offset:" + offset ); 
 
 		return read;
 	}
@@ -87,7 +98,9 @@ public class Client extends Socket {
 						fileName, endFlag);
 			}
 		}
+		
 		fis.close();
+		file.delete();
 	}
 
 	/*
@@ -163,6 +176,21 @@ public class Client extends Socket {
 		
 	}
 
+	public static void SockerHander() throws IOException{
+		
+		FileOutputStream fos = new FileOutputStream(breakInfor);
+		buf = infor.Serialize(translateRecord);
+		fos.write(buf.length);
+		fos.write(buf, 0, buf.length);
+		fos.close();
+		
+		log.info("断点信息保存完毕！"); 
+		
+		System.out.println("网络已经断开连接，程序即将退出，检查网络后请重启程序！");
+		client.close();
+		System.exit(1); 
+	}
+	
 	@SuppressWarnings("static-access")
 	public void start() throws IOException, ClassNotFoundException,
 			InterruptedException {
@@ -170,7 +198,18 @@ public class Client extends Socket {
 		while (true) {
 
 			if (breakInfor.exists()) {
-				recoverTransport(); // 开始文件续传
+				
+				try{
+					log.info("断点续传开始！"); 
+					recoverTransport(); // 开始文件续传
+				}
+				catch (SocketException e) {
+					
+					log.info("Socket error!"); 
+					SockerHander();
+					e.printStackTrace();
+				} 
+				
 			}
 
 			if (file.exists()) { // 当xls文件存在时，才能连接到服务器，否则不能连接到服务器
@@ -179,6 +218,8 @@ public class Client extends Socket {
 				if (client.isConnected()) // 判断当前连接状态
 					init();
 				
+				
+				log.info("正常传输开始！"); 
 				transport(); // 开始正常文件传输
 			} else {
 
@@ -194,21 +235,19 @@ public class Client extends Socket {
 		try {
 
 			new Client().start();
+			
 
 		} catch (SocketException e) {
 
-			FileOutputStream fos = new FileOutputStream(breakInfor);
-			buf = infor.Serialize(translateRecord);
-			fos.write(buf.length);
-			fos.write(buf, 0, buf.length);
-			fos.close();
-			System.out.println("网络已经断开连接，程序即将退出，检查网络后请重启程序！");
-			client.close();
-			System.exit(1); 
+			log.info("Socket error!"); 
+			SockerHander();
+			e.printStackTrace();
 
 		} catch (IOException e) {
 
 			e.printStackTrace();
+			log.info("IOException error!"); 
+			
 
 		}
 	}
