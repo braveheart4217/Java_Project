@@ -11,13 +11,13 @@ import java.net.UnknownHostException;
 import java.text.BreakIterator;
 import java.util.logging.*;
 
-@SuppressWarnings("unused")
 public class Client extends Socket {
 
 	// private static final String SERVER_IP = "10.176.172.123";
 	private static final String SERVER_IP = "127.0.0.1";
 	// private static final String SERVER_IP = "10.177.6.182";
 	private static final int SERVER_PORT = 2013;
+	
 
 	private static Socket client;
 	private boolean isReady = true;     //是否可以连接到服务器标志
@@ -36,13 +36,14 @@ public class Client extends Socket {
 	private static byte buf[] = null;          // 序列化buff
 	
 	private static Logger log;
+	private FileHandler fileHandler = null;
 	
 
 	public Client() throws SecurityException, IOException {
 
 		log = Logger.getLogger("test");
-        FileHandler fileHandler = new FileHandler("./log/test.xml"); 
-        fileHandler.setLevel(Level.FINE); 
+        fileHandler = new FileHandler("./log/test.xml"); 
+        fileHandler.setLevel(Level.OFF); 
         log.addHandler(fileHandler); 
 	}
 
@@ -71,7 +72,7 @@ public class Client extends Socket {
 		read = fis.read(sendBytes, 0, sendBytes.length);// 读取指定文件
 		dos.write(sendBytes, 0, readLength); // 再发真实数据
 		
-		log.info("fileName:" + fileName + " readLength:" + readLength + " offset:" + offset ); 
+		log.fine("fileName:" + fileName + " readLength:" + readLength + " offset:" + offset ); 
 
 		return read;
 	}
@@ -100,7 +101,7 @@ public class Client extends Socket {
 		}
 		
 		fis.close();
-		file.delete();
+//		file.delete();
 	}
 
 	/*
@@ -164,7 +165,6 @@ public class Client extends Socket {
 		if (client.isConnected()) // 判断当前连接状态
 			init();
 		Send(fis, translateRecord.getNum(), translateRecord.getOffset());
-
 	}
 	
 	public void newClient() throws UnknownHostException, IOException{
@@ -184,32 +184,33 @@ public class Client extends Socket {
 		fos.write(buf, 0, buf.length);
 		fos.close();
 		
-		log.info("断点信息保存完毕！"); 
+		log.fine("断点信息保存完毕！"); 
 		
 		System.out.println("网络已经断开连接，程序即将退出，检查网络后请重启程序！");
 		client.close();
 		System.exit(1); 
 	}
 	
-	@SuppressWarnings("static-access")
-	public void start() throws IOException, ClassNotFoundException,
+	public Runnable start() throws IOException, ClassNotFoundException,
 			InterruptedException {
-
-		while (true) {
-
+		
+		
+//		while (true) {
+			
 			if (breakInfor.exists()) {
-				
 				try{
-					log.info("断点续传开始！"); 
+					log.fine("断点续传开始！"); 
 					recoverTransport(); // 开始文件续传
 				}
 				catch (SocketException e) {
 					
-					log.info("Socket error!"); 
+					log.fine("Socket error!"); 
 					SockerHander();
 					e.printStackTrace();
-				} 
-				
+				}finally{
+					log.removeHandler(fileHandler);
+					client.close();
+				}
 			}
 
 			if (file.exists()) { // 当xls文件存在时，才能连接到服务器，否则不能连接到服务器
@@ -218,20 +219,28 @@ public class Client extends Socket {
 				if (client.isConnected()) // 判断当前连接状态
 					init();
 				
-				
 				log.info("正常传输开始！"); 
 				transport(); // 开始正常文件传输
+				
 			} else {
-
 				System.out.println("wait for the transport file!");
-				Thread.currentThread().sleep(1000 * 10);
+				Thread.currentThread();
+				Thread.sleep(1000 * 30);
 			}
 
-		}
+			
+//		}
+			
+//		log.removeHandler(fileHandler);
+		fileHandler.close();
+		
+		return null;
 	}
+	;
 
+/*
 	public static void main(String[] args) throws IOException,
-			ClassNotFoundException, InterruptedException {
+	ClassNotFoundException, InterruptedException {
 		try {
 
 			new Client().start();
@@ -239,17 +248,16 @@ public class Client extends Socket {
 
 		} catch (SocketException e) {
 
-			log.info("Socket error!"); 
+			log.fine("Socket error!"); 
 			SockerHander();
 			e.printStackTrace();
 
 		} catch (IOException e) {
 
 			e.printStackTrace();
-			log.info("IOException error!"); 
+			log.fine("IOException error!"); 
 			
-
 		}
 	}
-
+*/
 }
